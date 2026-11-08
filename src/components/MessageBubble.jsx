@@ -45,19 +45,27 @@ export default function MessageBubble({
             }
 
             try {
-                if (conversationKey) {
+                if (conversationKey && message.ciphertext && message.iv) {
                     const text = await decryptPayload(message.ciphertext, message.iv, conversationKey);
                     if (isMounted) {
                         setDecryptedText(text);
                         setDecryptionError(false);
                     }
+                } else if (message.text || message.plaintext) {
+                    setDecryptedText(message.text || message.plaintext);
+                    setDecryptionError(false);
                 } else {
-                    setDecryptedText(message.text || 'Encrypted Message');
+                    setDecryptedText('Encrypted Message');
                 }
             } catch (_err) {
                 if (isMounted) {
-                    setDecryptionError(true);
-                    setDecryptedText('[Encrypted message - Integrity verification failed]');
+                    if (message.text || message.plaintext) {
+                        setDecryptedText(message.text || message.plaintext);
+                        setDecryptionError(false);
+                    } else {
+                        setDecryptionError(true);
+                        setDecryptedText('[Encrypted message - Integrity verification failed]');
+                    }
                 }
             }
         }

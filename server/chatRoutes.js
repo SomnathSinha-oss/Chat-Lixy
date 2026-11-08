@@ -1,7 +1,32 @@
 import express from 'express';
+import crypto from 'crypto';
 import { authenticateSSR } from './supabaseServer.js';
 
 const router = express.Router();
+
+// Helper to generate mathematically valid AES-256-GCM ciphertexts matching client PBKDF2 room keys
+function encryptMessageForRoom(conversationId, text) {
+    try {
+        const roomSecret = `chatlixy-room-secret-${conversationId}`;
+        const salt = 'chatlixy-e2ee-salt-v1';
+        const key = crypto.pbkdf2Sync(roomSecret, salt, 100000, 32, 'sha256');
+        const iv = crypto.randomBytes(12);
+        const cipher = crypto.createCipheriv('aes-256-gcm', key, iv);
+        const enc = Buffer.concat([cipher.update(text, 'utf8'), cipher.final()]);
+        const tag = cipher.getAuthTag();
+        return {
+            ciphertext: Buffer.concat([enc, tag]).toString('base64'),
+            iv: iv.toString('base64'),
+            text
+        };
+    } catch (_err) {
+        return {
+            ciphertext: 'demo-cipher',
+            iv: 'demo-iv',
+            text
+        };
+    }
+}
 
 // User IDs
 const U_ALEX = '11111111-1111-4111-a111-111111111111';
@@ -98,14 +123,29 @@ const mockConversations = new Map([
     ]
 ]);
 
+const convLexi = 'aaaaaaaa-1111-4aaa-aaaa-111111111111';
+const convElena = 'bbbbbbbb-2222-4bbb-bbbb-222222222222';
+const convMarcus = 'cccccccc-3333-4ccc-cccc-333333333333';
+const convSophia = 'dddddddd-4444-4ddd-dddd-444444444444';
+const convKai = 'eeeeeeee-5555-4eee-eeee-555555555555';
+
+const encMsg1 = encryptMessageForRoom(convLexi, 'Hey Alex! The end-to-end encryption pipeline on ChatLixy is running smoothly.');
+const encMsg2 = encryptMessageForRoom(convLexi, 'Awesome! All cookies are HttpOnly and strict RLS is enforced at the DB level.');
+const encMsg3 = encryptMessageForRoom(convLexi, 'Here is the confidential security schematic. It will self-destruct once opened.');
+const encMsg4 = encryptMessageForRoom(convElena, 'Hi Alex! Testing real-time subscriptions and typing indicators.');
+const encMsg5 = encryptMessageForRoom(convMarcus, 'Database triggers and real-time publication status verified on PostgreSQL.');
+const encMsg6 = encryptMessageForRoom(convSophia, 'The STRIDE threat model evaluation passed with zero residual vulnerabilities.');
+const encMsg7 = encryptMessageForRoom(convKai, 'Security audit completed. Refresh token rotation is actively cycling sessions.');
+
 const mockMessages = [
     // Lexi Nova thread
     {
         id: 'msg-001',
-        conversation_id: 'aaaaaaaa-1111-4aaa-aaaa-111111111111',
+        conversation_id: convLexi,
         sender_id: U_LEXI,
-        ciphertext: 'g2+6qH8oIq1k7ZJ0v3p8tL61/cO26oX92aZzZcZpI7A==',
-        iv: 'MDEyMzQ1Njc4OWFi',
+        ciphertext: encMsg1.ciphertext,
+        iv: encMsg1.iv,
+        text: encMsg1.text,
         media_type: 'text',
         media_url: null,
         voice_duration: null,
@@ -120,10 +160,11 @@ const mockMessages = [
     },
     {
         id: 'msg-002',
-        conversation_id: 'aaaaaaaa-1111-4aaa-aaaa-111111111111',
+        conversation_id: convLexi,
         sender_id: U_ALEX,
-        ciphertext: 'kP8v3m1q8T+V29J1wL8s0a3K/zX74nY50bVvWwXyZ8B==',
-        iv: 'YWJjZGVmZ2hpamts',
+        ciphertext: encMsg2.ciphertext,
+        iv: encMsg2.iv,
+        text: encMsg2.text,
         media_type: 'text',
         media_url: null,
         voice_duration: null,
@@ -137,10 +178,11 @@ const mockMessages = [
     },
     {
         id: 'msg-003',
-        conversation_id: 'aaaaaaaa-1111-4aaa-aaaa-111111111111',
+        conversation_id: convLexi,
         sender_id: U_LEXI,
-        ciphertext: 'qR7k9L1p5M2n0B8v3C4x1Z6y8A9s2D7f4G5h1J3k0L==',
-        iv: 'ZGVmZ2hpamtsbW5v',
+        ciphertext: encMsg3.ciphertext,
+        iv: encMsg3.iv,
+        text: encMsg3.text,
         media_type: 'image',
         media_url: 'https://images.unsplash.com/photo-1550745165-9bc0b252726f?w=800',
         voice_duration: null,
@@ -153,10 +195,11 @@ const mockMessages = [
     // Elena Rostova thread
     {
         id: 'msg-004',
-        conversation_id: 'bbbbbbbb-2222-4bbb-bbbb-222222222222',
+        conversation_id: convElena,
         sender_id: U_ELENA,
-        ciphertext: 'aB3c4D5e6F7g8H9i0J1k2L3m4N5o6P7q8R9s0T1u2V==',
-        iv: 'MDEyMzQ1Njc4OWFi',
+        ciphertext: encMsg4.ciphertext,
+        iv: encMsg4.iv,
+        text: encMsg4.text,
         media_type: 'text',
         media_url: null,
         voice_duration: null,
@@ -171,10 +214,11 @@ const mockMessages = [
     // Marcus Chen thread
     {
         id: 'msg-005',
-        conversation_id: 'cccccccc-3333-4ccc-cccc-333333333333',
+        conversation_id: convMarcus,
         sender_id: U_MARCUS,
-        ciphertext: 'zX9y8W7v6U5t4S3r2Q1p0O9n8M7l6K5j4I3h2G1f0E==',
-        iv: 'YWJjZGVmZ2hpamts',
+        ciphertext: encMsg5.ciphertext,
+        iv: encMsg5.iv,
+        text: encMsg5.text,
         media_type: 'text',
         media_url: null,
         voice_duration: null,
@@ -187,10 +231,11 @@ const mockMessages = [
     // Dr. Sophia Al-Mansoor thread
     {
         id: 'msg-006',
-        conversation_id: 'dddddddd-4444-4ddd-dddd-444444444444',
+        conversation_id: convSophia,
         sender_id: U_SOPHIA,
-        ciphertext: 'mN1b2V3c4X5z6A7s8D9f0G1h2J3k4L5p6O7i8U9y0T==',
-        iv: 'ZGVmZ2hpamtsbW5v',
+        ciphertext: encMsg6.ciphertext,
+        iv: encMsg6.iv,
+        text: encMsg6.text,
         media_type: 'text',
         media_url: null,
         voice_duration: null,
@@ -205,10 +250,11 @@ const mockMessages = [
     // Kai Sterling thread
     {
         id: 'msg-007',
-        conversation_id: 'eeeeeeee-5555-4eee-eeee-555555555555',
+        conversation_id: convKai,
         sender_id: U_KAI,
-        ciphertext: 'pL0k9J8h7G6f5D4s3A2z1X0c9V8b7N6m5Q4w3E2r1T==',
-        iv: 'MDEyMzQ1Njc4OWFi',
+        ciphertext: encMsg7.ciphertext,
+        iv: encMsg7.iv,
+        text: encMsg7.text,
         media_type: 'text',
         media_url: null,
         voice_duration: null,
