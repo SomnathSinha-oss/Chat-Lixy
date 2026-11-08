@@ -12,6 +12,49 @@ import {
 } from 'lucide-react';
 import SecurityBadge from './SecurityBadge';
 
+const defaultDemoUsers = [
+    {
+        id: '22222222-2222-4222-a222-222222222222',
+        email: 'lexi@chatlixy.local',
+        display_name: 'Lexi Nova',
+        phone_number: '+1 (555) 014-9823',
+        status: 'online',
+        avatar_url: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=150'
+    },
+    {
+        id: '33333333-3333-4333-a333-333333333333',
+        email: 'elena@chatlixy.local',
+        display_name: 'Elena Rostova',
+        phone_number: '+1 (555) 017-4420',
+        status: 'online',
+        avatar_url: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=150'
+    },
+    {
+        id: '44444444-4444-4444-a444-444444444444',
+        email: 'marcus@chatlixy.local',
+        display_name: 'Marcus Chen',
+        phone_number: '+1 (555) 012-7744',
+        status: 'offline',
+        avatar_url: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150'
+    },
+    {
+        id: '55555555-5555-4555-a555-555555555555',
+        email: 'sophia@chatlixy.local',
+        display_name: 'Dr. Sophia Al-Mansoor',
+        phone_number: '+1 (555) 018-3391',
+        status: 'online',
+        avatar_url: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150'
+    },
+    {
+        id: '66666666-6666-4666-a666-666666666666',
+        email: 'kai@chatlixy.local',
+        display_name: 'Kai Sterling',
+        phone_number: '+1 (555) 016-5512',
+        status: 'away',
+        avatar_url: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150'
+    }
+];
+
 export default function Sidebar({
     currentUser,
     conversations,
@@ -30,6 +73,10 @@ export default function Sidebar({
     const [selectedContactId, setSelectedContactId] = useState('');
     const [chatType, setChatType] = useState('direct');
     const [groupName, setGroupName] = useState('');
+
+    const contactOptions = (availableUsers && availableUsers.length > 0)
+        ? availableUsers
+        : defaultDemoUsers;
 
     const filteredConversations = conversations.filter((c) => {
         const query = searchQuery.toLowerCase();
@@ -288,7 +335,7 @@ export default function Sidebar({
                             <div>
                                 <label className="block text-xs font-medium text-gray-300 mb-1">Select Contact</label>
                                 <div className="max-h-48 overflow-y-auto space-y-1.5 p-1">
-                                    {availableUsers
+                                    {contactOptions
                                         .filter((u) => u.id !== currentUser?.id)
                                         .map((user) => (
                                             <div

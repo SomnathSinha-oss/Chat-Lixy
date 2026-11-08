@@ -15,6 +15,13 @@ const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY || 'demo-anon-key';
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const JWT_SECRET = process.env.JWT_SECRET || 'chatlixy-super-secret-jwt-signing-key-32chars!';
 
+export const isLiveSupabase = Boolean(
+    process.env.SUPABASE_URL &&
+    process.env.SUPABASE_ANON_KEY &&
+    process.env.SUPABASE_URL !== 'https://demo-project.supabase.co' &&
+    !process.env.SUPABASE_URL.includes('demo-project')
+);
+
 // Administrative Supabase client for server-side operations
 export const supabaseAdmin = createClient(
     SUPABASE_URL,
@@ -92,7 +99,7 @@ export async function authenticateSSR(req, res, next) {
 
     try {
         // If live Supabase URL is available, verify via Supabase Auth
-        if (process.env.SUPABASE_URL && process.env.SUPABASE_ANON_KEY) {
+        if (isLiveSupabase) {
             const supabase = createSSRClient(req, res);
             const { data: { user }, error } = await supabase.auth.getUser(accessToken);
 

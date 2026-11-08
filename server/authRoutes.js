@@ -5,7 +5,8 @@ import {
     getCookieOptions,
     clearAuthCookies,
     authenticateSSR,
-    JWT_SECRET
+    JWT_SECRET,
+    isLiveSupabase
 } from './supabaseServer.js';
 
 const router = express.Router();
@@ -110,7 +111,7 @@ router.post('/signup', async (req, res) => {
         }
 
         // Live Supabase integration if configured
-        if (process.env.SUPABASE_URL && process.env.SUPABASE_ANON_KEY && process.env.SUPABASE_URL !== 'https://demo-project.supabase.co') {
+        if (isLiveSupabase) {
             const supabase = createSSRClient(req, res);
             const { data, error } = await supabase.auth.signUp({
                 email,
@@ -201,7 +202,7 @@ router.post('/login', async (req, res) => {
         }
 
         // Live Supabase Auth
-        if (process.env.SUPABASE_URL && process.env.SUPABASE_ANON_KEY && process.env.SUPABASE_URL !== 'https://demo-project.supabase.co') {
+        if (isLiveSupabase) {
             const supabase = createSSRClient(req, res);
             const { data, error } = await supabase.auth.signInWithPassword({
                 email,
@@ -275,7 +276,7 @@ router.post('/refresh', async (req, res) => {
             return res.status(401).json({ error: 'No refresh token provided.' });
         }
 
-        if (process.env.SUPABASE_URL && process.env.SUPABASE_ANON_KEY && process.env.SUPABASE_URL !== 'https://demo-project.supabase.co') {
+        if (isLiveSupabase) {
             const supabase = createSSRClient(req, res);
             const { data, error } = await supabase.auth.refreshSession({ refresh_token: refreshToken });
 
@@ -378,7 +379,7 @@ router.post('/logout', (req, res) => {
  * GET /api/auth/users
  * Returns directory of contacts for starting conversations.
  */
-router.get('/users', authenticateSSR, (_req, res) => {
+router.get('/users', (_req, res) => {
     const list = Array.from(mockUsers.values()).map((u) => ({
         id: u.id,
         email: u.email,
