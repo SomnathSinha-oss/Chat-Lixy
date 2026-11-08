@@ -134,6 +134,26 @@ export default function App() {
                                 m.id === receiptPayload.id ? { ...m, status: receiptPayload.status } : m
                             )
                         );
+                    },
+                    (reactionPayload) => {
+                        // Discord-style reaction update
+                        setMessages((prev) =>
+                            prev.map((m) =>
+                                m.id === reactionPayload.messageId
+                                    ? { ...m, reactions: reactionPayload.reactions }
+                                    : m
+                            )
+                        );
+                    },
+                    (viewOncePayload) => {
+                        // View once opened update
+                        setMessages((prev) =>
+                            prev.map((m) =>
+                                m.id === viewOncePayload.messageId
+                                    ? { ...m, is_opened: true }
+                                    : m
+                            )
+                        );
                     }
                 );
             } catch (err) {
@@ -217,7 +237,8 @@ export default function App() {
                 ciphertext,
                 iv,
                 media_type: attachmentData.mediaType,
-                media_url: mediaUrl
+                media_url: mediaUrl,
+                is_view_once: Boolean(attachmentData.isViewOnce)
             };
 
             const newMsg = await authService.sendMessage(activeConversationId, payload);
@@ -227,7 +248,39 @@ export default function App() {
         }
     };
 
-    // 8. Handle Typing State
+    // 8. Handle Discord-style Reactions
+    const handleReact = async (messageId, emoji) => {
+        if (!activeConversationId || !currentUser) return;
+        try {
+            const updatedReactions = await authService.reactToMessage(messageId, emoji);
+            setMessages((prev) =>
+                prev.map((m) =>
+                    m.id === messageId ? { ...m, reactions: updatedReactions } : m
+                )
+            );
+            realtime.sendReaction(messageId, updatedReactions, activeConversationId);
+        } catch (err) {
+            console.error('Failed to react to message:', err);
+        }
+    };
+
+    // 9. Handle WhatsApp-style View Once Destruction
+    const handleViewOnceOpened = async (messageId) => {
+        if (!activeConversationId) return;
+        try {
+            await authService.markViewOnceOpened(messageId);
+            setMessages((prev) =>
+                prev.map((m) =>
+                    m.id === messageId ? { ...m, is_opened: true } : m
+                )
+            );
+            realtime.sendViewOnceOpened(messageId, activeConversationId);
+        } catch (err) {
+            console.error('Failed to mark view once opened:', err);
+        }
+    };
+
+    // 10. Handle Typing State
     const handleTyping = (isTyping) => {
         if (activeConversationId && currentUser) {
             realtime.sendTyping(activeConversationId, currentUser, isTyping);
@@ -324,6 +377,8 @@ export default function App() {
                 typingUsers={typingUsers}
                 onMarkRead={handleMarkRead}
                 onDeleteMessage={handleDeleteMessage}
+                onReact={handleReact}
+                onViewOnceOpened={handleViewOnceOpened}
                 onOpenMobileMenu={() => setIsMobileMenuOpen(true)}
                 isOnline={isContactOnline}
             />

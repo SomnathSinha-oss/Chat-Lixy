@@ -1,21 +1,38 @@
 import { useState, useEffect, useRef } from 'react';
-import { Check, CheckCheck, Play, Pause, Lock, Trash2, ShieldAlert } from 'lucide-react';
+import {
+    Check,
+    CheckCheck,
+    Play,
+    Pause,
+    Lock,
+    Trash2,
+    ShieldAlert,
+    Smile,
+    X,
+    EyeOff
+} from 'lucide-react';
 import { decryptPayload } from '../lib/crypto';
 
 export default function MessageBubble({
     message,
     isOutgoing,
+    currentUser,
     conversationKey,
     onDelete,
-    onMarkRead
+    onMarkRead,
+    onReact,
+    onViewOnceOpened
 }) {
     const [decryptedText, setDecryptedText] = useState(null);
     const [decryptionError, setDecryptionError] = useState(false);
     const [isPlaying, setIsPlaying] = useState(false);
     const [audioProgress, setAudioProgress] = useState(0);
     const [showCryptoDetails, setShowCryptoDetails] = useState(false);
+    const [showViewOnceModal, setShowViewOnceModal] = useState(false);
+    const [showQuickReactions, setShowQuickReactions] = useState(false);
 
     const audioRef = useRef(null);
+    const quickEmojis = ['👍', '❤️', '🔥', '😂', '🚀', '🔒'];
 
     // Decrypt ciphertext using Web Crypto AES-256-GCM
     useEffect(() => {
@@ -35,7 +52,6 @@ export default function MessageBubble({
                         setDecryptionError(false);
                     }
                 } else {
-                    // Fallback preview while key is deriving
                     setDecryptedText(message.text || 'Encrypted Message');
                 }
             } catch (_err) {
@@ -48,7 +64,6 @@ export default function MessageBubble({
 
         decrypt();
 
-        // If message is incoming and unread, trigger read receipt
         if (!isOutgoing && message.status !== 'read' && onMarkRead) {
             onMarkRead(message.id);
         }
@@ -56,7 +71,7 @@ export default function MessageBubble({
         return () => {
             isMounted = false;
         };
-    }, [message.ciphertext, message.iv, conversationKey]);
+    }, [message.ciphertext, message.iv, conversationKey, isOutgoing, message.id, message.status, onMarkRead, message.text]);
 
     const handlePlayPause = () => {
         if (!audioRef.current) return;
@@ -79,6 +94,13 @@ export default function MessageBubble({
         if (!isoString) return '';
         const date = new Date(isoString);
         return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    };
+
+    const handleCloseViewOnce = () => {
+        setShowViewOnceModal(false);
+        if (onViewOnceOpened) {
+            onViewOnceOpened(message.id);
+        }
     };
 
     // Render receipt ticks
@@ -109,7 +131,34 @@ export default function MessageBubble({
     };
 
     return (
-        <div className={`flex flex-col mb-3 group ${isOutgoing ? 'items-end' : 'items-start'}`}>
+        <div className={`flex flex-col mb-3 group relative ${isOutgoing ? 'items-end' : 'items-start'}`}>
+            {/* Discord-style Hover Quick Reaction Toolbar */}
+            <div
+                className={`absolute -top-7 ${
+                    isOutgoing ? 'right-2' : 'left-2'
+                } z-20 hidden group-hover:flex items-center gap-0.5 px-2 py-1 rounded-xl glass-panel shadow-glass border border-dark-border/80 transition-all`}
+            >
+                {quickEmojis.map((emoji) => (
+                    <button
+                        key={emoji}
+                        type="button"
+                        onClick={() => onReact && onReact(message.id, emoji)}
+                        className="p-1 text-sm hover:scale-125 transition-transform"
+                        title={`React with ${emoji}`}
+                    >
+                        {emoji}
+                    </button>
+                ))}
+                <button
+                    type="button"
+                    onClick={() => setShowQuickReactions(!showQuickReactions)}
+                    className="p-1 text-gray-400 hover:text-neon-green transition-colors"
+                    title="Add reaction"
+                >
+                    <Smile className="w-3.5 h-3.5" />
+                </button>
+            </div>
+
             <div
                 className={`relative max-w-[85%] sm:max-w-[70%] rounded-2xl p-3.5 shadow-sm transition-all duration-200 border ${
                     isOutgoing
@@ -117,8 +166,41 @@ export default function MessageBubble({
                         : 'bg-dark-card text-gray-100 border-dark-border hover:border-gray-700'
                 }`}
             >
-                {/* Media Attachment: Image */}
-                {message.media_type === 'image' && message.media_url && (
+                {/* 1. WhatsApp-style "View Once" Media Container */}
+                {message.is_view_once && (
+                    <div className="mb-2">
+                        {message.is_opened ? (
+                            <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-dark-base/60 border border-dark-border/40 text-gray-500 select-none">
+                                <div className="w-5 h-5 rounded-full border border-gray-600 flex items-center justify-center text-[10px] font-bold">
+                                    1
+                                </div>
+                                <span className="text-xs font-medium">Opened</span>
+                            </div>
+                        ) : (
+                            <button
+                                type="button"
+                                onClick={() => setShowViewOnceModal(true)}
+                                className="flex items-center gap-3 px-3.5 py-2.5 rounded-xl bg-dark-base border border-neon-green/50 hover:border-neon-green text-gray-100 hover:text-white transition-all text-left group/vo shadow-sm w-full"
+                            >
+                                <div className="w-7 h-7 rounded-full border-2 border-neon-green text-neon-green flex items-center justify-center text-xs font-black shadow-neon-green">
+                                    1
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                    <div className="text-xs font-bold text-white flex items-center gap-1.5">
+                                        <span>Photo</span>
+                                        <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-neon-green/20 text-neon-green font-mono font-bold">
+                                            VIEW ONCE
+                                        </span>
+                                    </div>
+                                    <div className="text-[11px] text-gray-400 truncate">Tap to open image once</div>
+                                </div>
+                            </button>
+                        )}
+                    </div>
+                )}
+
+                {/* 2. Standard Media Attachment: Image (non-view-once) */}
+                {!message.is_view_once && message.media_type === 'image' && message.media_url && (
                     <div className="mb-2 rounded-xl overflow-hidden max-h-72">
                         <img
                             src={message.media_url}
@@ -129,7 +211,7 @@ export default function MessageBubble({
                     </div>
                 )}
 
-                {/* Media Attachment: Video */}
+                {/* 3. Media Attachment: Video */}
                 {message.media_type === 'video' && message.media_url && (
                     <div className="mb-2 rounded-xl overflow-hidden max-h-72">
                         <video
@@ -140,7 +222,7 @@ export default function MessageBubble({
                     </div>
                 )}
 
-                {/* Media Attachment: Voice Note */}
+                {/* 4. Media Attachment: Voice Note */}
                 {message.media_type === 'audio' && message.media_url && (
                     <div className="flex items-center gap-3 p-1 min-w-[220px]">
                         <button
@@ -155,7 +237,6 @@ export default function MessageBubble({
                         </button>
 
                         <div className="flex-1">
-                            {/* Waveform track */}
                             <div className="relative h-2 bg-dark-base rounded-full overflow-hidden">
                                 <div
                                     className="absolute top-0 bottom-0 left-0 bg-neon-green transition-all duration-100"
@@ -181,8 +262,8 @@ export default function MessageBubble({
                     </div>
                 )}
 
-                {/* Text Content */}
-                {decryptedText && message.media_type !== 'audio' && (
+                {/* 5. Decrypted Text Content */}
+                {decryptedText && message.media_type !== 'audio' && !message.is_view_once && (
                     <div className={`text-sm break-words whitespace-pre-wrap ${decryptionError ? 'text-neon-red font-mono' : ''}`}>
                         {decryptionError && <ShieldAlert className="w-4 h-4 inline mr-1 text-neon-red" />}
                         {decryptedText}
@@ -232,6 +313,57 @@ export default function MessageBubble({
                     </div>
                 )}
             </div>
+
+            {/* Discord-style Reaction Badges underneath Bubble */}
+            {Array.isArray(message.reactions) && message.reactions.length > 0 && (
+                <div className="flex flex-wrap gap-1 mt-1 px-1">
+                    {message.reactions.map((r) => {
+                        const hasReacted = currentUser && r.users?.includes(currentUser.id);
+                        return (
+                            <button
+                                key={r.emoji}
+                                type="button"
+                                onClick={() => onReact && onReact(message.id, r.emoji)}
+                                className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs transition-all ${
+                                    hasReacted
+                                        ? 'bg-neon-green/15 border border-neon-green text-white shadow-[0_0_6px_rgba(57,255,20,0.3)]'
+                                        : 'bg-dark-card border border-dark-border text-gray-300 hover:bg-dark-hover'
+                                }`}
+                                title={`Reactions: ${r.users?.length || 0}`}
+                            >
+                                <span>{r.emoji}</span>
+                                <span className="text-[10px] font-mono font-bold">{r.users?.length || 0}</span>
+                            </button>
+                        );
+                    })}
+                </div>
+            )}
+
+            {/* WhatsApp-style View Once Fullscreen Modal */}
+            {showViewOnceModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/95 backdrop-blur-xl animate-in fade-in duration-200">
+                    <div className="relative max-w-2xl w-full flex flex-col items-center">
+                        <div className="w-full flex items-center justify-between pb-3 mb-3 border-b border-dark-border text-gray-300">
+                            <div className="flex items-center gap-2 text-neon-green text-xs font-bold">
+                                <span className="w-5 h-5 rounded-full border-2 border-neon-green flex items-center justify-center text-[10px]">1</span>
+                                <EyeOff className="w-4 h-4" />
+                                <span>View Once Photo (Permanently deleted on close)</span>
+                            </div>
+                            <button
+                                onClick={handleCloseViewOnce}
+                                className="px-3 py-1.5 rounded-xl btn-neon-red text-xs font-semibold flex items-center gap-1.5"
+                            >
+                                <X className="w-4 h-4" /> Close & Destroy
+                            </button>
+                        </div>
+                        <img
+                            src={message.media_url}
+                            alt="View Once Photo"
+                            className="max-h-[75vh] max-w-full rounded-2xl object-contain shadow-glass border border-neon-green/30"
+                        />
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

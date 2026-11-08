@@ -22,6 +22,8 @@ export default function ChatWindow({
     typingUsers,
     onMarkRead,
     onDeleteMessage,
+    onReact,
+    onViewOnceOpened,
     onOpenMobileMenu,
     isOnline
 }) {
@@ -141,9 +143,12 @@ export default function ChatWindow({
                             key={msg.id}
                             message={msg}
                             isOutgoing={msg.sender_id === currentUser?.id}
+                            currentUser={currentUser}
                             conversationKey={conversationKey}
                             onDelete={onDeleteMessage}
                             onMarkRead={onMarkRead}
+                            onReact={onReact}
+                            onViewOnceOpened={onViewOnceOpened}
                         />
                     ))
                 )}

@@ -12,6 +12,7 @@ CREATE TABLE IF NOT EXISTS public.users (
     id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
     email TEXT UNIQUE NOT NULL,
     display_name TEXT NOT NULL,
+    phone_number TEXT, -- Demo / Contact phone number (e.g. +1 555-019-2831)
     avatar_url TEXT,
     public_key TEXT, -- Public key for Web Crypto ECDH E2EE key exchange
     status TEXT NOT NULL DEFAULT 'offline' CHECK (status IN ('online', 'offline', 'away')),
@@ -54,6 +55,9 @@ CREATE TABLE IF NOT EXISTS public.messages (
     media_type TEXT NOT NULL DEFAULT 'text' CHECK (media_type IN ('text', 'image', 'video', 'audio', 'document')),
     voice_duration REAL,      -- Audio length in seconds (for voice notes)
     status TEXT NOT NULL DEFAULT 'sent' CHECK (status IN ('sent', 'delivered', 'read')),
+    reactions JSONB NOT NULL DEFAULT '[]'::jsonb, -- Discord-style reactions [{ emoji: '🔥', users: ['uuid1'] }]
+    is_view_once BOOLEAN NOT NULL DEFAULT FALSE,  -- WhatsApp-style View Once flag
+    is_opened BOOLEAN NOT NULL DEFAULT FALSE,     -- Whether View Once media was viewed
     is_deleted BOOLEAN NOT NULL DEFAULT FALSE,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()

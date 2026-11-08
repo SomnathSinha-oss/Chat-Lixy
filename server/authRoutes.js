@@ -19,6 +19,7 @@ const mockUsers = new Map([
             email: 'alex@chatlixy.local',
             password: 'Password123!',
             display_name: 'Alex Vance',
+            phone_number: '+1 (555) 019-2831',
             status: 'online',
             avatar_url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150',
             public_key: null
@@ -31,8 +32,61 @@ const mockUsers = new Map([
             email: 'lexi@chatlixy.local',
             password: 'Password123!',
             display_name: 'Lexi Nova',
+            phone_number: '+1 (555) 014-9823',
             status: 'online',
             avatar_url: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=150',
+            public_key: null
+        }
+    ],
+    [
+        '33333333-3333-4333-a333-333333333333',
+        {
+            id: '33333333-3333-4333-a333-333333333333',
+            email: 'elena@chatlixy.local',
+            password: 'Password123!',
+            display_name: 'Elena Rostova',
+            phone_number: '+1 (555) 017-4420',
+            status: 'online',
+            avatar_url: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=150',
+            public_key: null
+        }
+    ],
+    [
+        '44444444-4444-4444-a444-444444444444',
+        {
+            id: '44444444-4444-4444-a444-444444444444',
+            email: 'marcus@chatlixy.local',
+            password: 'Password123!',
+            display_name: 'Marcus Chen',
+            phone_number: '+1 (555) 012-7744',
+            status: 'offline',
+            avatar_url: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150',
+            public_key: null
+        }
+    ],
+    [
+        '55555555-5555-4555-a555-555555555555',
+        {
+            id: '55555555-5555-4555-a555-555555555555',
+            email: 'sophia@chatlixy.local',
+            password: 'Password123!',
+            display_name: 'Dr. Sophia Al-Mansoor',
+            phone_number: '+1 (555) 018-3391',
+            status: 'online',
+            avatar_url: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150',
+            public_key: null
+        }
+    ],
+    [
+        '66666666-6666-4666-a666-666666666666',
+        {
+            id: '66666666-6666-4666-a666-666666666666',
+            email: 'kai@chatlixy.local',
+            password: 'Password123!',
+            display_name: 'Kai Sterling',
+            phone_number: '+1 (555) 016-5512',
+            status: 'away',
+            avatar_url: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150',
             public_key: null
         }
     ]
@@ -281,6 +335,7 @@ router.get('/session', authenticateSSR, async (req, res) => {
                 id: mock.id,
                 email: mock.email,
                 display_name: mock.display_name,
+                phone_number: mock.phone_number,
                 avatar_url: mock.avatar_url,
                 public_key: mock.public_key,
                 status: mock.status
@@ -290,6 +345,7 @@ router.get('/session', authenticateSSR, async (req, res) => {
                 id: user.id,
                 email: user.email,
                 display_name: user.user_metadata?.display_name || user.display_name || user.email,
+                phone_number: user.user_metadata?.phone_number || '+1 (555) 019-0000',
                 avatar_url: user.user_metadata?.avatar_url || null,
                 public_key: user.user_metadata?.public_key || null,
                 status: 'online'
@@ -322,11 +378,12 @@ router.post('/logout', (req, res) => {
  * GET /api/auth/users
  * Returns directory of contacts for starting conversations.
  */
-router.get('/users', authenticateSSR, (req, res) => {
+router.get('/users', authenticateSSR, (_req, res) => {
     const list = Array.from(mockUsers.values()).map((u) => ({
         id: u.id,
         email: u.email,
         display_name: u.display_name,
+        phone_number: u.phone_number,
         avatar_url: u.avatar_url,
         status: u.status,
         public_key: u.public_key

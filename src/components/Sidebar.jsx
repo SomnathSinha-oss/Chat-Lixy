@@ -7,7 +7,8 @@ import {
     LogOut,
     Lock,
     X,
-    UserPlus
+    UserPlus,
+    Phone
 } from 'lucide-react';
 import SecurityBadge from './SecurityBadge';
 
@@ -30,9 +31,13 @@ export default function Sidebar({
     const [chatType, setChatType] = useState('direct');
     const [groupName, setGroupName] = useState('');
 
-    const filteredConversations = conversations.filter((c) =>
-        (c.name || '').toLowerCase().includes(searchQuery.toLowerCase())
-    );
+    const filteredConversations = conversations.filter((c) => {
+        const query = searchQuery.toLowerCase();
+        return (
+            (c.name || '').toLowerCase().includes(query) ||
+            (c.phone_number || '').toLowerCase().includes(query)
+        );
+    });
 
     const handleCreateChat = (e) => {
         e.preventDefault();
@@ -197,7 +202,11 @@ export default function Sidebar({
                                         <div className="flex items-center justify-between text-[11px] text-gray-400">
                                             <span className="truncate flex items-center gap-1">
                                                 <Lock className="w-2.5 h-2.5 text-neon-green shrink-0" />
-                                                End-to-end encrypted
+                                                {conv.phone_number ? (
+                                                    <span className="text-[10px] text-gray-400 font-mono">{conv.phone_number}</span>
+                                                ) : (
+                                                    'End-to-end encrypted'
+                                                )}
                                             </span>
                                         </div>
                                     </div>
@@ -295,11 +304,19 @@ export default function Sidebar({
                                                     <img
                                                         src={user.avatar_url || `https://api.dicebear.com/7.x/bottts/svg?seed=${user.email}`}
                                                         alt={user.display_name}
-                                                        className="w-7 h-7 rounded-full bg-dark-base border border-dark-border"
+                                                        className="w-8 h-8 rounded-full bg-dark-base border border-dark-border object-cover"
                                                     />
                                                     <div>
-                                                        <div className="text-xs font-semibold">{user.display_name}</div>
-                                                        <div className="text-[10px] text-gray-400">{user.email}</div>
+                                                        <div className="text-xs font-semibold text-white">{user.display_name}</div>
+                                                        <div className="text-[10px] text-gray-400 flex items-center gap-1.5">
+                                                            {user.phone_number && (
+                                                                <span className="text-neon-green font-mono flex items-center gap-1">
+                                                                    <Phone className="w-2.5 h-2.5" /> {user.phone_number}
+                                                                </span>
+                                                            )}
+                                                            <span>&bull;</span>
+                                                            <span>{user.email}</span>
+                                                        </div>
                                                     </div>
                                                 </div>
                                                 <div className="flex items-center gap-1.5">

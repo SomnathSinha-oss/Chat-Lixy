@@ -1,5 +1,6 @@
-import { useState, useRef } from 'react';
-import { Send, Paperclip, Mic } from 'lucide-react';
+import { useState, useRef, useEffect } from 'react';
+import { Send, Paperclip, Mic, Smile } from 'lucide-react';
+import EmojiPicker, { Theme } from 'emoji-picker-react';
 import VoiceRecorder from './VoiceRecorder';
 import AttachmentModal from './AttachmentModal';
 
@@ -11,11 +12,29 @@ export default function MessageInput({
     disabled
 }) {
     const [text, setText] = useState('');
+    const [showEmojiPicker, setShowEmojiPicker] = useState(false);
     const [isVoiceRecording, setIsVoiceRecording] = useState(false);
     const [selectedFile, setSelectedFile] = useState(null);
 
+    const inputRef = useRef(null);
     const fileInputRef = useRef(null);
     const typingTimerRef = useRef(null);
+    const emojiPickerRef = useRef(null);
+
+    // Close emoji picker when clicking outside
+    useEffect(() => {
+        function handleClickOutside(event) {
+            if (emojiPickerRef.current && !emojiPickerRef.current.contains(event.target)) {
+                setShowEmojiPicker(false);
+            }
+        }
+        if (showEmojiPicker) {
+            document.addEventListener('mousedown', handleClickOutside);
+        }
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+        };
+    }, [showEmojiPicker]);
 
     const handleTextChange = (e) => {
         setText(e.target.value);
@@ -27,6 +46,11 @@ export default function MessageInput({
                 onTyping(false);
             }, 2000);
         }
+    };
+
+    const handleEmojiClick = (emojiData) => {
+        setText((prev) => prev + emojiData.emoji);
+        inputRef.current?.focus();
     };
 
     const handleKeyDown = (e) => {
@@ -46,6 +70,7 @@ export default function MessageInput({
 
         onSendMessage(trimmed);
         setText('');
+        setShowEmojiPicker(false);
     };
 
     const handleFileSelect = (e) => {
@@ -71,7 +96,24 @@ export default function MessageInput({
     }
 
     return (
-        <div className="p-3 sm:p-4 border-t border-dark-border bg-dark-base">
+        <div className="p-3 sm:p-4 border-t border-dark-border bg-dark-base relative">
+            {/* Discord-style / Modern Emoji Picker Popover */}
+            {showEmojiPicker && (
+                <div
+                    ref={emojiPickerRef}
+                    className="absolute bottom-16 right-4 sm:right-20 z-50 shadow-glass border border-dark-border rounded-2xl overflow-hidden animate-in zoom-in-95 duration-150"
+                >
+                    <EmojiPicker
+                        theme={Theme.DARK}
+                        onEmojiClick={handleEmojiClick}
+                        width={320}
+                        height={400}
+                        previewConfig={{ showPreview: false }}
+                        searchPlaceHolder="Search emoji..."
+                    />
+                </div>
+            )}
+
             <form onSubmit={handleSubmit} className="flex items-center gap-2 max-w-5xl mx-auto">
                 {/* Hidden File Input */}
                 <input
@@ -88,22 +130,37 @@ export default function MessageInput({
                     onClick={() => fileInputRef.current?.click()}
                     disabled={disabled}
                     className="p-2.5 rounded-xl text-gray-400 hover:text-white hover:bg-dark-hover transition-colors disabled:opacity-50"
-                    title="Attach file or photo"
+                    title="Attach file, photo or View Once media"
                 >
                     <Paperclip className="w-5 h-5 rotate-45" />
                 </button>
 
-                {/* Text Input */}
+                {/* Text Input with Emoji Picker Toggle */}
                 <div className="flex-1 relative flex items-center">
                     <input
+                        ref={inputRef}
                         type="text"
                         placeholder="Type an end-to-end encrypted message..."
                         value={text}
                         onChange={handleTextChange}
                         onKeyDown={handleKeyDown}
                         disabled={disabled}
-                        className="w-full px-4 py-2.5 rounded-2xl bg-dark-card border border-dark-border text-white text-sm placeholder-gray-500 focus:outline-none focus:border-neon-green/60 transition-all disabled:opacity-50"
+                        className="w-full pl-4 pr-10 py-2.5 rounded-2xl bg-dark-card border border-dark-border text-white text-sm placeholder-gray-500 focus:outline-none focus:border-neon-green/60 transition-all disabled:opacity-50"
                     />
+
+                    {/* Emoji Picker Toggle Button */}
+                    <button
+                        type="button"
+                        onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                        className={`absolute right-3 p-1 rounded-lg transition-colors ${
+                            showEmojiPicker
+                                ? 'text-neon-green bg-neon-green/10'
+                                : 'text-gray-400 hover:text-white'
+                        }`}
+                        title="Add Emoji"
+                    >
+                        <Smile className="w-5 h-5" />
+                    </button>
                 </div>
 
                 {/* Voice Record or Send Button */}
@@ -129,7 +186,7 @@ export default function MessageInput({
                 )}
             </form>
 
-            {/* Modal for Attachment Preview */}
+            {/* Modal for Attachment Preview (includes WhatsApp-style View Once toggle) */}
             {selectedFile && (
                 <AttachmentModal
                     file={selectedFile}

@@ -172,6 +172,20 @@ export default function AuthModal({ onAuthSuccess }) {
                             >
                                 Lexi Nova
                             </button>
+                            <button
+                                type="button"
+                                onClick={() => handleQuickLogin('elena@chatlixy.local', 'Password123!')}
+                                className="px-2.5 py-1.5 rounded-lg bg-dark-surface border border-dark-border text-[11px] text-gray-300 hover:text-neon-green hover:border-neon-green/40 transition-colors"
+                            >
+                                Elena Rostova
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => handleQuickLogin('sophia@chatlixy.local', 'Password123!')}
+                                className="px-2.5 py-1.5 rounded-lg bg-dark-surface border border-dark-border text-[11px] text-gray-300 hover:text-neon-green hover:border-neon-green/40 transition-colors"
+                            >
+                                Dr. Sophia
+                            </button>
                         </div>
                     </div>
                 )}

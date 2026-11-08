@@ -9,17 +9,28 @@ class RealtimeManager {
             message: new Set(),
             typing: new Set(),
             presence: new Set(),
-            receipt: new Set()
+            receipt: new Set(),
+            reaction: new Set(),
+            viewOnce: new Set()
         };
     }
 
     /**
      * Subscribe to conversation realtime events:
      * - New messages (postgres_changes)
+     * - Status & reaction updates (postgres_changes & broadcast)
      * - Typing indicators (broadcast)
-     * - Read/delivered receipts (broadcast & postgres_changes)
+     * - View Once media opened (broadcast)
      */
-    joinConversation(conversationId, currentUser, onMessage, onTyping, onReceipt) {
+    joinConversation(
+        conversationId,
+        _currentUser,
+        onMessage,
+        onTyping,
+        onReceipt,
+        onReaction,
+        onViewOnce
+    ) {
         if (this.channel) {
             this.leaveConversation();
         }
@@ -27,6 +38,8 @@ class RealtimeManager {
         if (onMessage) this.subscribers.message.add(onMessage);
         if (onTyping) this.subscribers.typing.add(onTyping);
         if (onReceipt) this.subscribers.receipt.add(onReceipt);
+        if (onReaction) this.subscribers.reaction.add(onReaction);
+        if (onViewOnce) this.subscribers.viewOnce.add(onViewOnce);
 
         if (isSupabaseConfigured) {
             this.channel = supabase.channel(`conversation:${conversationId}`, {
@@ -45,7 +58,7 @@ class RealtimeManager {
                         this.subscribers.message.forEach((cb) => cb(payload.new));
                     }
                 )
-                // Message status updates (delivered / read)
+                // Message status & reaction updates
                 .on(
                     'postgres_changes',
                     {
@@ -56,11 +69,29 @@ class RealtimeManager {
                     },
                     (payload) => {
                         this.subscribers.receipt.forEach((cb) => cb(payload.new));
+                        if (payload.new.reactions) {
+                            this.subscribers.reaction.forEach((cb) =>
+                                cb({ messageId: payload.new.id, reactions: payload.new.reactions })
+                            );
+                        }
+                        if (payload.new.is_opened) {
+                            this.subscribers.viewOnce.forEach((cb) =>
+                                cb({ messageId: payload.new.id, is_opened: true })
+                            );
+                        }
                     }
                 )
                 // Typing indicators via broadcast
                 .on('broadcast', { event: 'typing' }, (payload) => {
                     this.subscribers.typing.forEach((cb) => cb(payload.payload));
+                })
+                // Realtime reactions via broadcast
+                .on('broadcast', { event: 'reaction' }, (payload) => {
+                    this.subscribers.reaction.forEach((cb) => cb(payload.payload));
+                })
+                // Realtime view once opened notification
+                .on('broadcast', { event: 'view_once_opened' }, (payload) => {
+                    this.subscribers.viewOnce.forEach((cb) => cb(payload.payload));
                 })
                 .subscribe((status) => {
                     if (status === 'SUBSCRIBED') {
@@ -80,36 +111,30 @@ class RealtimeManager {
         this.subscribers.message.clear();
         this.subscribers.typing.clear();
         this.subscribers.receipt.clear();
+        this.subscribers.reaction.clear();
+        this.subscribers.viewOnce.clear();
     }
 
     /**
      * Broadcast typing indicator with auto debounce
      */
     sendTyping(conversationId, user, isTyping = true) {
+        const payload = {
+            user_id: user.id,
+            display_name: user.display_name,
+            conversation_id: conversationId,
+            is_typing: isTyping,
+            timestamp: Date.now()
+        };
+
         if (isSupabaseConfigured && this.channel) {
             this.channel.send({
                 type: 'broadcast',
                 event: 'typing',
-                payload: {
-                    user_id: user.id,
-                    display_name: user.display_name,
-                    conversation_id: conversationId,
-                    is_typing: isTyping,
-                    timestamp: Date.now()
-                }
+                payload
             });
-        } else {
-            // Standalone broadcast notification
-            this.subscribers.typing.forEach((cb) =>
-                cb({
-                    user_id: user.id,
-                    display_name: user.display_name,
-                    conversation_id: conversationId,
-                    is_typing: isTyping,
-                    timestamp: Date.now()
-                })
-            );
         }
+        this.subscribers.typing.forEach((cb) => cb(payload));
     }
 
     /**
@@ -126,6 +151,36 @@ class RealtimeManager {
         this.subscribers.receipt.forEach((cb) =>
             cb({ id: messageId, status, conversation_id: conversationId })
         );
+    }
+
+    /**
+     * Broadcast Discord-style reaction
+     */
+    sendReaction(messageId, reactions, conversationId) {
+        const payload = { messageId, reactions, conversationId };
+        if (isSupabaseConfigured && this.channel) {
+            this.channel.send({
+                type: 'broadcast',
+                event: 'reaction',
+                payload
+            });
+        }
+        this.subscribers.reaction.forEach((cb) => cb(payload));
+    }
+
+    /**
+     * Broadcast View Once opened event
+     */
+    sendViewOnceOpened(messageId, conversationId) {
+        const payload = { messageId, is_opened: true, conversationId };
+        if (isSupabaseConfigured && this.channel) {
+            this.channel.send({
+                type: 'broadcast',
+                event: 'view_once_opened',
+                payload
+            });
+        }
+        this.subscribers.viewOnce.forEach((cb) => cb(payload));
     }
 
     /**
@@ -160,8 +215,14 @@ class RealtimeManager {
                     }
                 });
         } else {
-            // Standalone simulated presence
-            const mockOnline = new Set(['11111111-1111-4111-a111-111111111111', '22222222-2222-4222-a222-222222222222', currentUser.id]);
+            // Standalone simulated presence (all demo contacts active)
+            const mockOnline = new Set([
+                '11111111-1111-4111-a111-111111111111',
+                '22222222-2222-4222-a222-222222222222',
+                '33333333-3333-4333-a333-333333333333',
+                '55555555-5555-4555-a555-555555555555',
+                currentUser.id
+            ]);
             if (onPresenceSync) onPresenceSync(mockOnline);
         }
     }

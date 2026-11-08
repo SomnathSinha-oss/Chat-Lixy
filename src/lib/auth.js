@@ -136,6 +136,23 @@ export const authService = {
         return res.ok;
     },
 
+    async reactToMessage(messageId, emoji) {
+        const res = await fetchWithAuth(`/chat/messages/${messageId}/reaction`, {
+            method: 'PATCH',
+            body: JSON.stringify({ emoji })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Failed to react');
+        return data.reactions;
+    },
+
+    async markViewOnceOpened(messageId) {
+        const res = await fetchWithAuth(`/chat/messages/${messageId}/view-once-opened`, {
+            method: 'PATCH'
+        });
+        return res.ok;
+    },
+
     async uploadMedia(dataUrl, mimeType, fileName) {
         const res = await fetchWithAuth('/chat/upload', {
             method: 'POST',

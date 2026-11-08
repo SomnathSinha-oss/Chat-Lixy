@@ -1,4 +1,4 @@
-import { X, Key, LogOut, Ban } from 'lucide-react';
+import { X, Key, LogOut, Ban, Phone } from 'lucide-react';
 
 export default function UserProfileModal({ user, onClose, onLogout }) {
     if (!user) return null;
@@ -24,6 +24,11 @@ export default function UserProfileModal({ user, onClose, onLogout }) {
                     </div>
                     <h3 className="text-lg font-bold text-white">{user.display_name}</h3>
                     <p className="text-xs text-gray-400 font-mono">{user.email}</p>
+                    {user.phone_number && (
+                        <p className="text-xs text-neon-green font-mono flex items-center gap-1 mt-0.5">
+                            <Phone className="w-3 h-3" /> {user.phone_number}
+                        </p>
+                    )}
                     <div className="mt-2 inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-neon-green/10 text-neon-green text-[11px] font-medium border border-neon-green/20">
                         <span className="w-1.5 h-1.5 rounded-full bg-neon-green"></span>
                         Active Session (SSR Cookie Protected)
